@@ -4,7 +4,9 @@ dotenv.config();  // Load .env FIRST
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { connectDB } from "./config/db";
+
 import { authRouter } from "./routes/auth";
+import { authMiddleware } from "./middleware/auth";
 
 
 const app = express();
@@ -18,6 +20,14 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/auth", authRouter);
+
+app.get("/api/protected", authMiddleware, (req: any, res: any) => {
+  res.json({
+    message: "Access granted",
+    userId: req.userId,
+  });
+});
+
 
 
 const startServer = async () => {
