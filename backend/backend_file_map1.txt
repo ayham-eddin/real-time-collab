@@ -1,0 +1,7 @@
+./backend_file_map1.txt
+./package-lock.json
+./package.json
+./.env
+./tsconfig.json
+./src/config/db.ts
+./src/server.ts
