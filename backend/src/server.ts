@@ -7,7 +7,7 @@ import { connectDB } from "./config/db";
 
 import { authRouter } from "./routes/auth";
 import { authMiddleware } from "./middleware/auth";
-
+import { documentRouter } from "./routes/document";
 
 const app = express();
 app.use(cors());
@@ -27,6 +27,8 @@ app.get("/api/protected", authMiddleware, (req: any, res: any) => {
     userId: req.userId,
   });
 });
+
+app.use("/api/documents", documentRouter);
 
 
 
