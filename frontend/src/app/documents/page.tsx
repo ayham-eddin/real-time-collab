@@ -10,14 +10,31 @@ type DocumentType = {
 };
 
 export default function DocumentsPage() {
+  const router = useRouter();
+
+  // Read token ONCE (React Compiler safe)
+  const [authorized] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("token");
+    }
+    return false;
+  });
+
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  const router = useRouter();
-
-  // Fetch documents from backend
+  // Redirect if not authorized (no setState here)
   useEffect(() => {
+    if (!authorized) {
+      router.push("/login");
+    }
+  }, [authorized, router]);
+
+  // Fetch documents only when authorized
+  useEffect(() => {
+    if (!authorized) return;
+
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -32,14 +49,14 @@ export default function DocumentsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [authorized]);
 
   // Create new document
   async function createDocument() {
     setCreating(true);
 
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) return router.push("/login");
 
     const res = await fetch("http://localhost:4000/api/documents", {
       method: "POST",
@@ -58,18 +75,38 @@ export default function DocumentsPage() {
     }
   }
 
+  // Logout
+  function logout() {
+    localStorage.removeItem("token");
+    router.push("/login");
+  }
+
+  // While redirecting, show loading
+  if (!authorized) {
+    return <div className="p-8 text-center text-gray-500">Redirecting...</div>;
+  }
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Your Documents</h1>
 
-        <button
-          onClick={createDocument}
-          disabled={creating}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          {creating ? "Creating..." : "New Document"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={createDocument}
+            disabled={creating}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            {creating ? "Creating..." : "New Document"}
+          </button>
+
+          <button
+            onClick={logout}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {loading ? (
