@@ -1,0 +1,30 @@
+.
+├── README.md
+├── frontend_map.txt
+├── new_frontend_map.txt
+├── next-env.d.ts
+├── next.config.mjs
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── src
+│   ├── app
+│   │   ├── favicon.ico
+│   │   ├── fonts
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components
+│   ├── features
+│   │   ├── auth
+│   │   ├── documents
+│   │   └── editor
+│   └── lib
+│       ├── api
+│       ├── auth
+│       ├── socket
+│       └── yjs
+├── tailwind.config.ts
+└── tsconfig.json
+
+14 directories, 14 files
