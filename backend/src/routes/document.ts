@@ -45,7 +45,7 @@ documentRouter.get(
   }
 );
 
-// Get single document (returns content as string)
+// Get single document
 documentRouter.get(
   "/:id",
   authMiddleware,
@@ -53,7 +53,9 @@ documentRouter.get(
     try {
       const doc = await Document.findById(req.params.id);
 
-      if (!doc) return res.status(404).json({ message: "Document not found" });
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
 
       if (
         doc.owner !== req.userId &&
@@ -90,7 +92,9 @@ documentRouter.post(
         { new: true }
       );
 
-      if (!doc) return res.status(404).json({ message: "Document not found" });
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
 
       res.json({ message: "Saved", document: doc });
     } catch (error) {
@@ -107,7 +111,9 @@ documentRouter.delete(
     try {
       const doc = await Document.findById(req.params.id);
 
-      if (!doc) return res.status(404).json({ message: "Document not found" });
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
 
       if (doc.owner !== req.userId) {
         return res.status(403).json({ message: "Only owner can delete this" });

@@ -4,14 +4,14 @@ import * as Y from "yjs";
 
 export const createSocketServer = (httpServer: any) => {
   const io = new Server(httpServer, {
-    cors: { origin: "*" }
+    cors: { origin: "*" },
   });
 
   io.on("connection", (socket) => {
     console.log("🟢 Connected:", socket.id);
 
     // User joins a document room
-    socket.on("join-document", (docId) => {
+    socket.on("join-document", (docId: string) => {
       socket.join(docId);
 
       // Load Yjs doc and send initial state
@@ -23,15 +23,18 @@ export const createSocketServer = (httpServer: any) => {
     });
 
     // Receive document updates
-    socket.on("update-doc", ({ docId, update }) => {
-      const ydoc = getYDoc(docId);
+    socket.on(
+      "update-doc",
+      ({ docId, update }: { docId: string; update: Uint8Array }) => {
+        const ydoc = getYDoc(docId);
 
-      // Apply update to Yjs state
-      Y.applyUpdate(ydoc, update);
+        // Apply update to Yjs state
+        Y.applyUpdate(ydoc, update);
 
-      // Broadcast update to others
-      socket.to(docId).emit("update-doc", update);
-    });
+        // Broadcast update to others
+        socket.to(docId).emit("update-doc", update);
+      }
+    );
 
     socket.on("disconnect", () => {
       console.log("🔴 Disconnected:", socket.id);

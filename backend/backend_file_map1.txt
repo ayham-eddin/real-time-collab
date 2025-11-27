@@ -3,5 +3,13 @@
 ./package.json
 ./.env
 ./tsconfig.json
+./src/middleware/auth.ts
+./src/socket.ts
 ./src/config/db.ts
+./src/models/Document.ts
+./src/models/User.ts
+./src/yjs.ts
+./src/saveYDoc.ts
 ./src/server.ts
+./src/routes/document.ts
+./src/routes/auth.ts
