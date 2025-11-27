@@ -2,12 +2,13 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { Editor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
+import dynamic from "next/dynamic";
 import * as Y from "yjs";
 import { io, Socket } from "socket.io-client";
+import { ShareDialog } from "@/components/ShareDialog";
 
 const API_BASE_URL = "http://localhost:4000";
 
@@ -25,7 +26,6 @@ type DocumentPageProps = {
   };
 };
 
-// Normalize update coming from server
 const normalizeUpdate = (
   update: Uint8Array | ArrayBuffer | number[]
 ): Uint8Array => {
@@ -55,7 +55,7 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
   };
 
   // -------------------------------
-  // Load document meta (title, owner)
+  // Fetch document meta
   // -------------------------------
   useEffect(() => {
     const token = getToken();
@@ -94,7 +94,7 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
   }, [documentId, router]);
 
   // -------------------------------
-  // Setup Socket.io + Yjs sync
+  // Setup Socket.io + Yjs
   // -------------------------------
   useEffect(() => {
     const socket = io(API_BASE_URL, { transports: ["websocket"] });
@@ -119,23 +119,23 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
   }, [documentId, yDoc]);
 
   // -------------------------------
-  // Emit local Yjs updates to server
+  // Emit changes to server
   // -------------------------------
   useEffect(() => {
-    const onLocalUpdate = (update: Uint8Array, origin: unknown) => {
+    const handleLocalUpdate = (update: Uint8Array, origin: unknown) => {
       if (origin === "remote") return;
       socketRef.current?.emit("update-doc", { docId: documentId, update });
     };
 
-    yDoc.on("update", onLocalUpdate);
+    yDoc.on("update", handleLocalUpdate);
 
     return () => {
-      yDoc.off("update", onLocalUpdate);
+      yDoc.off("update", handleLocalUpdate);
     };
   }, [documentId, yDoc]);
 
   // -------------------------------
-  // Initialize TipTap AFTER mount (SSR safe)
+  // Initialize TipTap editor
   // -------------------------------
   useEffect(() => {
     const instance = new Editor({
@@ -156,13 +156,11 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
 
     setEditor(instance);
 
-    return () => {
-      instance.destroy();
-    };
+    return () => instance.destroy();
   }, [yDoc]);
 
   // -------------------------------
-  // Auto-save HTML snapshot
+  // Auto-save every 10 seconds
   // -------------------------------
   useEffect(() => {
     if (!editor) return;
@@ -205,6 +203,7 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
   const createdLabel = docMeta?.createdAt
     ? new Date(docMeta.createdAt).toLocaleString()
     : "";
+
   const updatedLabel = docMeta?.updatedAt
     ? new Date(docMeta.updatedAt).toLocaleString()
     : "";
@@ -212,7 +211,8 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-900 text-slate-100">
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <header className="flex items-center justify-between">
+        {/* Header */}
+        <header className="flex items-center justify-between gap-3">
           <button
             onClick={() => router.push("/documents")}
             className="h-8 rounded-full border border-white/10 bg-white/5 px-3 text-xs hover:bg-white/10"
@@ -220,13 +220,20 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
             ← Back
           </button>
 
-          <div className="text-right text-xs">
-            {isSaving ? (
-              <span className="text-emerald-300">Saving…</span>
-            ) : (
-              <span className="text-emerald-300">Saved</span>
-            )}
-            {updatedLabel && <div>Updated: {updatedLabel}</div>}
+          <div className="flex items-center gap-3">
+            <ShareDialog
+              documentId={documentId}
+              onInvited={() => console.log("User invited")}
+            />
+
+            <div className="text-right text-xs">
+              {isSaving ? (
+                <span className="text-emerald-300">Saving…</span>
+              ) : (
+                <span className="text-emerald-300">Saved</span>
+              )}
+              {updatedLabel && <div>Updated: {updatedLabel}</div>}
+            </div>
           </div>
         </header>
 
@@ -240,15 +247,10 @@ const DocumentPage = ({ params }: DocumentPageProps) => {
           {docMeta?.title || "Untitled Document"}
         </h1>
 
-        {/* SSR FIX: prevent hydration mismatch */}
         {!editor ? (
           <div className="mt-6 h-[60vh] animate-pulse rounded-2xl bg-white/10" />
         ) : (
-          <EditorContent
-            editor={editor}
-            suppressHydrationWarning
-            className="mt-6"
-          />
+          <EditorContent editor={editor} className="mt-6" />
         )}
       </main>
     </div>

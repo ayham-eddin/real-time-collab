@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { Document } from "../models/Document";
+import { User } from "../models/User";
 import { authMiddleware, AuthRequest } from "../middleware/auth";
 
 export const documentRouter = Router();
@@ -15,20 +16,22 @@ documentRouter.post(
       const doc = new Document({
         title,
         owner: req.userId,
-        content: "", // store HTML/content string
+        content: "",
         collaborators: [],
       });
 
       await doc.save();
 
-      res.json({ message: "Document created", document: doc });
+      return res.json({ message: "Document created", document: doc });
     } catch (error) {
-      res.status(500).json({ message: "Error creating document", error });
+      return res
+        .status(500)
+        .json({ message: "Error creating document", error });
     }
   }
 );
 
-// Get all documents belonging to user
+// Get documents for user
 documentRouter.get(
   "/",
   authMiddleware,
@@ -38,9 +41,11 @@ documentRouter.get(
         $or: [{ owner: req.userId }, { collaborators: req.userId }],
       });
 
-      res.json(docs);
+      return res.json(docs);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching documents", error });
+      return res
+        .status(500)
+        .json({ message: "Error fetching documents", error });
     }
   }
 );
@@ -53,9 +58,7 @@ documentRouter.get(
     try {
       const doc = await Document.findById(req.params.id);
 
-      if (!doc) {
-        return res.status(404).json({ message: "Document not found" });
-      }
+      if (!doc) return res.status(404).json({ message: "Document not found" });
 
       if (
         doc.owner !== req.userId &&
@@ -64,20 +67,75 @@ documentRouter.get(
         return res.status(403).json({ message: "Access denied" });
       }
 
-      res.json(doc);
+      return res.json(doc);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching document", error });
+      return res
+        .status(500)
+        .json({ message: "Error fetching document", error });
     }
   }
 );
 
-// Autosave HTML content → MongoDB
+// =========================
+// ⭐ INVITE COLLABORATOR ⭐
+// =========================
+documentRouter.post(
+  "/:id/invite",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const docId = req.params.id;
+      const { email } = req.body;
+
+      if (!email) return res.status(400).json({ message: "Email is required" });
+
+      const doc = await Document.findById(docId);
+      if (!doc) return res.status(404).json({ message: "Document not found" });
+
+      // Only owner can invite
+      if (doc.owner !== req.userId) {
+        return res.status(403).json({ message: "Only owner can invite users" });
+      }
+
+      // Find user by email
+      const user = await User.findOne({ email });
+      if (!user)
+        return res
+          .status(404)
+          .json({ message: "No user found with that email" });
+
+      const userId = user._id.toString();
+
+      // Prevent duplicate
+      if (doc.collaborators.includes(userId)) {
+        return res
+          .status(400)
+          .json({ message: "User already has access to this document" });
+      }
+
+      // Add collaborator
+      doc.collaborators.push(userId);
+      await doc.save();
+
+      return res.json({
+        message: "User added as collaborator",
+        document: doc,
+      });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Error inviting collaborator", error });
+    }
+  }
+);
+
+// Save document content
 documentRouter.post(
   "/:id/save",
   authMiddleware,
   async (req: AuthRequest, res: Response) => {
     try {
-      const { content } = req.body as { content?: string };
+      const { content } = req.body;
 
       if (typeof content !== "string") {
         return res.status(400).json({ message: "Missing content string" });
@@ -96,9 +154,9 @@ documentRouter.post(
         return res.status(404).json({ message: "Document not found" });
       }
 
-      res.json({ message: "Saved", document: doc });
+      return res.json({ message: "Saved", document: doc });
     } catch (error) {
-      res.status(500).json({ message: "Error saving document", error });
+      return res.status(500).json({ message: "Error saving document", error });
     }
   }
 );
@@ -111,19 +169,21 @@ documentRouter.delete(
     try {
       const doc = await Document.findById(req.params.id);
 
-      if (!doc) {
-        return res.status(404).json({ message: "Document not found" });
-      }
+      if (!doc) return res.status(404).json({ message: "Document not found" });
 
       if (doc.owner !== req.userId) {
-        return res.status(403).json({ message: "Only owner can delete this" });
+        return res
+          .status(403)
+          .json({ message: "Only owner can delete this document" });
       }
 
       await doc.deleteOne();
 
-      res.json({ message: "Document deleted" });
+      return res.json({ message: "Document deleted" });
     } catch (error) {
-      res.status(500).json({ message: "Error deleting document", error });
+      return res
+        .status(500)
+        .json({ message: "Error deleting document", error });
     }
   }
 );
