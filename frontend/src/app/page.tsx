@@ -1,11 +1,10 @@
-// src/app/page.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-export default function Home() {
+const Home = () => {
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white overflow-hidden">
       {/* Floating gradient circle */}
@@ -72,4 +71,6 @@ export default function Home() {
       </div>
     </div>
   );
-}
+};
+
+export default Home;
